@@ -89,3 +89,7 @@ The API supports labeled ANFIS training at `/api/anfis/train` with at least ten 
 ## License and dataset notice
 
 Code licensing and dataset licensing are separate. Verify the current license and attribution conditions of each dataset and pretrained weight source before academic or public redistribution.
+
+## Deploy (Render)
+
+The repository includes `render.yaml`, `wsgi.py` and `gunicorn`. On [render.com](https://render.com), choose **New → Blueprint**, select this GitHub repository and apply; Render builds with `pip install -r requirements.txt` and starts `gunicorn wsgi:app`. On the free plan the SQLite history and uploaded images are reset when the service restarts or redeploys, and the service sleeps after 15 minutes without traffic (the first request then takes about a minute).

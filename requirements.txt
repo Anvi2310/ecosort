@@ -6,3 +6,4 @@ matplotlib>=3.8
 pytest>=8.0
 # Install a PyTorch build suitable for your OS/CUDA separately if training or
 # MobileNetV2 inference is required. Demo mode has no mandatory torch dependency.
+gunicorn>=22.0

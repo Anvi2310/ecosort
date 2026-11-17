@@ -16,6 +16,13 @@ from backend.models.membership_functions import default_partition
 from backend.models.neuro_fuzzy import SugenoANFIS
 from backend.models.waste_classifier import WasteClassifier
 
+def bounded(payload,key,default,lo,hi):
+    """Read an integer request parameter and keep it in a safe range (protects a public server)."""
+    try: value=int(payload.get(key,default))
+    except (TypeError,ValueError): raise ValueError(f"{key} must be a whole number") from None
+    if not lo<=value<=hi: raise ValueError(f"{key} must be between {lo} and {hi}")
+    return value
+
 def create_app():
     app=Flask(__name__,static_folder="frontend",static_url_path="")
     app.config.update(SECRET_KEY=SECRET_KEY,MAX_CONTENT_LENGTH=MAX_UPLOAD_BYTES)
@@ -112,20 +119,21 @@ def create_app():
     @app.post("/api/gp/evolve")
     def gp_run():
         payload=request.get_json(silent=True) or {}
-        try: result=evolve(population=int(payload.get('population',32)),generations=int(payload.get('generations',12)))
-        except (ValueError,FileNotFoundError) as exc: return jsonify(error=f"GP data problem: {exc}"),400
+        try: result=evolve(population=bounded(payload,'population',32,4,100),generations=bounded(payload,'generations',12,1,100))
+        except (ValueError,FileNotFoundError) as exc: return jsonify(error=f"GP: {exc}"),400
         state['gp_tree']=result.pop('_tree')
         insert_run('GeneticProgrammingRuns',result,result['best_rule']); return jsonify(result)
     @app.post("/api/ga/optimize")
     def ga_run():
         payload=request.get_json(silent=True) or {}
-        try: result=optimize(population=int(payload.get('population',24)),generations=int(payload.get('generations',12)),inversion=bool(payload.get('inversion',False)),deletion=bool(payload.get('deletion',False)))
-        except (ValueError,FileNotFoundError) as exc: return jsonify(error=f"GA data problem: {exc}"),400
+        try: result=optimize(population=bounded(payload,'population',24,4,100),generations=bounded(payload,'generations',12,1,100),inversion=bool(payload.get('inversion',False)),deletion=bool(payload.get('deletion',False)))
+        except (ValueError,FileNotFoundError) as exc: return jsonify(error=f"GA: {exc}"),400
         state['partition']=decode(result['best'])
         insert_run('GeneticAlgorithmRuns',result); return jsonify(result)
     @app.post('/api/anfis/train')
     def anfis_train():
         payload=request.get_json(silent=True) or {}; samples=payload.get('samples',[])
+        if not isinstance(samples,list) or len(samples)>5000: return jsonify(error='samples must be a list of at most 5000 records'),400
         try:
             X=[[float(s[k]) for k in ('contamination','moisture','recyclability','hazard')] for s in samples]
             y=[float(s['priority']) for s in samples]
@@ -134,7 +142,7 @@ def create_app():
             order=np.random.default_rng(42).permutation(len(X)); ntrain=max(6,int(.7*len(X))); nval=max(1,int(.15*len(X)))
             train_ix=order[:ntrain]; val_ix=order[ntrain:ntrain+nval]; test_ix=order[ntrain+nval:]
             xa=np.asarray(X); ya=np.asarray(y); model=SugenoANFIS(state['partition'])
-            history=model.fit(xa[train_ix],ya[train_ix],validation=(xa[val_ix],ya[val_ix]),epochs=int(payload.get('epochs',20)))
+            history=model.fit(xa[train_ix],ya[train_ix],validation=(xa[val_ix],ya[val_ix]),epochs=bounded(payload,'epochs',20,1,200))
             state['anfis']=model; state['anfis_metrics']=model.metrics(xa[test_ix],ya[test_ix])
             return jsonify(status='trained in memory for this server process',metrics=state['anfis_metrics'],history=history,training_samples=len(train_ix),validation_samples=len(val_ix),test_samples=len(test_ix),target='user-supplied priority scores',split='fixed-seed 70/15/15 approximate split')
         except (KeyError,TypeError,ValueError) as exc: return jsonify(error=str(exc)),400
