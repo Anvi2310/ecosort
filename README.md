@@ -1,5 +1,7 @@
 # EcoSort
 
+**Live demo:** https://ecosort-blol.onrender.com (free hosting: the first visit after a quiet period can take about a minute to wake up)
+
 EcoSort is an academic waste segregation and recycling decision-support system. It combines image classification, an interpretable Sugeno neuro-fuzzy model, tree-based genetic programming, and a genetic algorithm that tunes fuzzy membership functions.
 
 ## Architecture
