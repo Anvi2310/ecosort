@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+instance/*.sqlite3
+data/raw/**
+data/processed/images/**
+*.pt
+*.pth
+*.onnx
+reports/evaluation/generated/**
+# Local-only files
+.DS_Store
+neuro.zip
+instance/
+backend/models/weights/
+data/synthetic/condition/

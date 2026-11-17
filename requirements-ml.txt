@@ -1,0 +1,3 @@
+# Install a build matching your OS and accelerator from https://pytorch.org/get-started/locally/
+torch>=2.2
+torchvision>=0.17
